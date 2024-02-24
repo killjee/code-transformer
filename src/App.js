@@ -7,10 +7,11 @@ import Modal from 'react-bootstrap/Modal';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
 import { diff } from 'react-ace';
+import { Selectors } from './selector';
 
 function App() {
   const [languages, setLanguages] = useState([]);
-  const [selectedLang, setSelectedLang] = useState("");
+  const [selectedLang, setSelectedLang] = useState({});
   const [tracks, setTracks] = useState([new Track("placeholder", [])]);
   const [selectedTrack, setSelectedTrack] = useState(new Track("placeholder", []));
   const [preparedTrack, setPreparedTrack] = useState(new Track("placeholder", []))
@@ -21,12 +22,11 @@ function App() {
   const [codeGenerated, setCodeGenerated] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [showReplayModal, setShowReplayModal] = useState(false)
-  const [editor, setEditor] = useState()
   const [totalUndoChanges, setTotalUndoChanges] = useState(0)
   const [rewriteStates, setRewriteStates] = useState([])
   const [diffableOutput, setDiffableOutput] = useState("")
 
-
+  // - MARK: Hooks
   useEffect(() => {
     fetch('https://lyfkykbisow7zkharariyw26ia0zppmy.lambda-url.us-east-1.on.aws/languages')
       .then(response => response.json())
@@ -74,6 +74,7 @@ function App() {
       .catch(error => console.error(error));
   }, []);
 
+  // - MARK: Handle ui events
   const handleLanguageChange = (event) => {
     setSelectedLang(event.target.value);
   };
@@ -84,15 +85,15 @@ function App() {
     setSelectedTrack(event.target.value)
   };
 
+  // Logic to embed changes 1 by 1 and present to UI
   const handleReplay = () => {
     var rewriteIndex = totalUndoChanges
     var tempCode = diffableOutput
     if (totalUndoChanges == 0) {
       tempCode = sourceInput
     }
-    console.log(rewriteStates)
+
     var startIndex = rewriteStates[rewriteIndex]["edit"]["start_byte"]
-    console.log(startIndex)
     var endIndex = rewriteStates[rewriteIndex]["edit"]["old_end_byte"]
     var firstPart = ""
     if (startIndex > 0) {
@@ -103,16 +104,12 @@ function App() {
     if (endIndex < tempCode.length) {
       thirdPart = tempCode.substring(endIndex)
     }
-    console.log(tempCode)
-    console.log(tempCode.length)
-    console.log(firstPart)
-    console.log(secondPart)
-    console.log(thirdPart)
 
     setDiffableOutput(firstPart + secondPart + thirdPart)
     setTotalUndoChanges(totalUndoChanges + 1)
   }
 
+  // Code input changed
   function handleInputChanged(value) {
     setSourceInput(value);
   };
@@ -120,6 +117,12 @@ function App() {
   const handlePlayButtonTap = async () => {
     var trackArgs = {}
     var track = {}
+
+    // Since track can have multiple kind of arguments
+    //    1. No argumens
+    //    2. Arguments with no value
+    //    3. Arguments with values
+    // This block prepares track for the request with current state of arguments
     if (preparedTrack.argumentMap.length === 0) {
       track = preparedTrack.key
     } else if (preparedTrack.argumentMap.length === 1 && preparedTrack.argumentMap[0].value == null) {
@@ -137,6 +140,7 @@ function App() {
       track: track
     })
 
+    // Set all state after Getting response
     setPlayButtonDisabled(true)
     const response = await fetch('https://lyfkykbisow7zkharariyw26ia0zppmy.lambda-url.us-east-1.on.aws/play', {
       method: 'POST',
@@ -154,8 +158,6 @@ function App() {
 
       setSourceOutput(responseBody["output"])
       setRewriteStates(responseBody["rewrites"])
-      console.log(responseBody["rewrites"])
-      highlightRewrites(responseBody["rewrites"])
     } else {
       setShowError(true)
     }
@@ -171,6 +173,7 @@ function App() {
     setShowReplayModal(true)
   }
 
+  // Handles change in value of arguments for tracks
   const handleArgumentChange = (event) => {
     preparedTrack.argumentMap.forEach((arg) => {
       if (arg.key === event.target.id) {
@@ -179,44 +182,6 @@ function App() {
       }
     })
     setPreparedTrack(preparedTrack)
-  }
-
-  function handleEditorSetup(editor) {
-    editor.updateOptions({
-      readOnly: true, minimap: {
-        enabled: false
-      }
-    })
-    setEditor(editor)
-  }
-
-
-  function highlightRewrites(rewrites) {
-    var decorations = []
-    rewrites.forEach((value, index) => {
-      var startRow = structuredClone(value["edit"]["start_position"]["row"])
-      var startColumn = structuredClone(value["edit"]["start_position"]["row"])
-      var endRow = structuredClone(value["edit"]["new_end_position"]["row"])
-      var endColumn = structuredClone(value["edit"]["new_end_position"]["row"])
-      var range = {
-        startLineNumber: startRow,
-        startColumn: startColumn,
-        endLineNumber: endRow,
-        endColumn: endColumn,
-      }
-      var decoration = {
-        range: range,
-        options: {
-          className: "inline_decoration",
-          hoverMessage: "Code refactored",
-          isWholeLine: true,
-        }
-      }
-      if (decorations.length < 1) {
-        decorations.push(decoration)
-      }
-    })
-    var dec = editor.createDecorationsCollection(decorations)
   }
 
   var editorOptions = {
@@ -236,40 +201,14 @@ function App() {
     <>
       <div className="container">
         <div className="selectors">
-          <div className="language-selector-div" >
-            <FormControl className="language-selector" fullWidth={false} variant='filled' size='small' >
-              <InputLabel id="language-select-label">Language</InputLabel>
-              <Select
-                id="language-selector"
-                value={selectedLang}
-                onChange={handleLanguageChange}
-              >
-                {
-                  languages.map((language, index) =>
-                    <MenuItem value={language}>{language}</MenuItem>
-                  )
-                }
-              </Select>
-            </FormControl>
-          </div>
-          <div className="track-selector-div" >
-            <FormControl
-              className="track-selector" fullWidth={false} variant='filled' size='small' >
-              <InputLabel id="track-select-label">Track</InputLabel>
-              <Select
-                id="track-selector"
-                onChange={handleTrackChange}
-                value={selectedTrack}
-              >
-                {
-                  tracks.map((track, index) =>
-                    <MenuItem value={track}>{track.key}</MenuItem>
-                  )
-                }
-              </Select>
-            </FormControl>
-
-          </div>
+          <Selectors
+            selectedLang={selectedLang}
+            selectedTrack={selectedTrack}
+            handleLanguageChange={handleLanguageChange}
+            handleTrackChange={handleTrackChange}
+            languages={languages}
+            tracks={tracks}
+          />
         </div >
         <div className="controls">
           {
@@ -344,9 +283,6 @@ function App() {
                   value={sourceOutput}
                   theme='light'
                   defaultValue="// Write your code here"
-                  onMount={(editor, monaco) => {
-                    handleEditorSetup(editor)
-                  }}
                 />
             }
           </Card>
@@ -364,7 +300,7 @@ function App() {
             disabled={totalUndoChanges === rewriteStates.length}>
             {
               totalUndoChanges !== rewriteStates.length ?
-                "Replay change number: " + (totalUndoChanges + 1) + " out of " + rewriteStates.length + "changes" :
+                "Replay change number: " + (totalUndoChanges + 1) + " out of " + rewriteStates.length + " changes" :
                 "Replay complete"
             }
           </Button>
