@@ -68,6 +68,13 @@
   margin-top: 2em;
 }
 
+.replay-button {
+  align-self: center;
+  justify-self: center;
+  margin-left: 1em;
+  margin-top: 2em;
+}
+
 .code {
   display: flex;
   flex-direction: row;

@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import Modal from 'react-bootstrap/Modal';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
+import { diff } from 'react-ace';
 
 function App() {
   const [languages, setLanguages] = useState([]);
@@ -19,7 +20,11 @@ function App() {
   const [playButtonDisabled, setPlayButtonDisabled] = useState(false)
   const [codeGenerated, setCodeGenerated] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [showReplayModal, setShowReplayModal] = useState(false)
   const [editor, setEditor] = useState()
+  const [totalUndoChanges, setTotalUndoChanges] = useState(0)
+  const [rewriteStates, setRewriteStates] = useState([])
+  const [diffableOutput, setDiffableOutput] = useState("")
 
 
   useEffect(() => {
@@ -79,11 +84,40 @@ function App() {
     setSelectedTrack(event.target.value)
   };
 
+  const handleReplay = () => {
+    var rewriteIndex = totalUndoChanges
+    var tempCode = diffableOutput
+    if (totalUndoChanges == 0) {
+      tempCode = sourceInput
+    }
+    console.log(rewriteStates)
+    var startIndex = rewriteStates[rewriteIndex]["edit"]["start_byte"]
+    console.log(startIndex)
+    var endIndex = rewriteStates[rewriteIndex]["edit"]["old_end_byte"]
+    var firstPart = ""
+    if (startIndex > 0) {
+      firstPart = tempCode.substring(0, startIndex)
+    }
+    var secondPart = rewriteStates[rewriteIndex]["replacement"]
+    var thirdPart = ""
+    if (endIndex < tempCode.length) {
+      thirdPart = tempCode.substring(endIndex)
+    }
+    console.log(tempCode)
+    console.log(tempCode.length)
+    console.log(firstPart)
+    console.log(secondPart)
+    console.log(thirdPart)
+
+    setDiffableOutput(firstPart + secondPart + thirdPart)
+    setTotalUndoChanges(totalUndoChanges + 1)
+  }
+
   function handleInputChanged(value) {
     setSourceInput(value);
   };
 
-  const handlePlay = async () => {
+  const handlePlayButtonTap = async () => {
     var trackArgs = {}
     var track = {}
     if (preparedTrack.argumentMap.length === 0) {
@@ -119,14 +153,22 @@ function App() {
       var responseBody = await response.json();
 
       setSourceOutput(responseBody["output"])
+      setRewriteStates(responseBody["rewrites"])
+      console.log(responseBody["rewrites"])
       highlightRewrites(responseBody["rewrites"])
     } else {
       setShowError(true)
     }
   }
 
-  const handleDiff = () => {
+  const handleDiffButtonTap = () => {
+    setDiffableOutput(sourceOutput)
     setShowModal(true)
+  }
+
+  const handleReplayButtonTap = () => {
+    setDiffableOutput(sourceInput)
+    setShowReplayModal(true)
   }
 
   const handleArgumentChange = (event) => {
@@ -147,6 +189,7 @@ function App() {
     })
     setEditor(editor)
   }
+
 
   function highlightRewrites(rewrites) {
     var decorations = []
@@ -176,6 +219,19 @@ function App() {
     var dec = editor.createDecorationsCollection(decorations)
   }
 
+  var editorOptions = {
+    scrollbars: { visible: false },
+    minimap: {
+      enabled: false
+    }
+  }
+  var readOnlyEditorOptions = {
+    readOnly: true,
+    scrollbars: { visible: false },
+    minimap: {
+      enabled: false
+    }
+  }
   return (
     <>
       <div className="container">
@@ -236,7 +292,7 @@ function App() {
             <div className="play-button">
               {
                 (selectedTrack.key !== "placeholder" && selectedLang !== "") &&
-                <Button className="play-button" variant="contained" onClick={handlePlay} disabled={playButtonDisabled} >
+                <Button className="play-button" variant="contained" onClick={handlePlayButtonTap} disabled={playButtonDisabled} >
                   Run
                 </Button>
               }
@@ -246,8 +302,18 @@ function App() {
             <div className="diff-button">
               {
                 (codeGenerated === true) &&
-                <Button className="diff-button" variant="contained" onClick={handleDiff} disabled={playButtonDisabled} >
+                <Button className="diff-button" variant="contained" onClick={handleDiffButtonTap} disabled={playButtonDisabled} >
                   Diff
+                </Button>
+              }
+            </div>
+          }
+          {
+            <div className="replay-button">
+              {
+                (codeGenerated === true) &&
+                <Button className="replay-button" variant="contained" onClick={handleReplayButtonTap} disabled={playButtonDisabled} >
+                  Replay
                 </Button>
               }
             </div>
@@ -260,6 +326,7 @@ function App() {
               height="85vh"
               value={sourceInput}
               theme='light'
+              options={editorOptions}
               defaultValue="// Write your code here"
               onChange={(value, viewUpdate) => {
                 handleInputChanged(value)
@@ -273,6 +340,7 @@ function App() {
                 <Editor
                   class="input-editor"
                   height="85vh"
+                  options={readOnlyEditorOptions}
                   value={sourceOutput}
                   theme='light'
                   defaultValue="// Write your code here"
@@ -284,18 +352,48 @@ function App() {
           </Card>
         </div >
       </div >
-      <Modal show={showModal} fullscreen={true} onHide={() => setShowModal(false)}>
+      <Modal show={showReplayModal} fullscreen={true} onHide={() => {
+        setShowReplayModal(false)
+        setTotalUndoChanges(0)
+      }}>
         <Modal.Header closeButton>
-          <Modal.Title>Diff</Modal.Title>
+          <Button
+            className="play-button"
+            variant="contained"
+            onClick={handleReplay}
+            disabled={totalUndoChanges === rewriteStates.length}>
+            {
+              totalUndoChanges !== rewriteStates.length ?
+                "Replay change number: " + (totalUndoChanges + 1) + " out of " + rewriteStates.length + "changes" :
+                "Replay complete"
+            }
+          </Button>
         </Modal.Header>
         <Modal.Body>
           <DiffEditor
+            options={readOnlyEditorOptions}
             original={sourceInput}
-            modified={sourceOutput}
+            modified={diffableOutput}
           />
         </Modal.Body>
-      </Modal>
+      </Modal >
+      <Modal show={showModal} fullscreen={true} onHide={() => {
+        setShowModal(false)
+        setTotalUndoChanges(0)
+      }}>
+        <Modal.Header closeButton>
+          Diff
+        </Modal.Header>
+        <Modal.Body>
+          <DiffEditor
+            options={readOnlyEditorOptions}
+            original={sourceInput}
+            modified={diffableOutput}
+          />
+        </Modal.Body>
+      </Modal >
     </>
+
   );
 }
 class Track {
