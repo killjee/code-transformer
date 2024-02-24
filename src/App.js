@@ -8,6 +8,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
 import { Selectors } from './selector';
 import { Controls } from './controls';
+import { Track, TrackArgument } from './track';
 
 function App() {
   const [languages, setLanguages] = useState([]);
@@ -299,19 +300,6 @@ function App() {
     </>
 
   );
-}
-class Track {
-  constructor(key, argumentMap) {
-    this.key = key
-    this.argumentMap = argumentMap
-  }
-}
-
-class TrackArgument {
-  constructor(key, value) {
-    this.key = key
-    this.value = value
-  }
 }
 
 export default App;
