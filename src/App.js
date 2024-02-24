@@ -43,10 +43,7 @@ function App() {
     fetch('https://lyfkykbisow7zkharariyw26ia0zppmy.lambda-url.us-east-1.on.aws/tracks')
       .then(response => response.json())
       .then(trackJson => {
-
-
         var _tracks = []
-
         trackJson.forEach((track, index) => {
           var trackKey = Object.keys(track)[0];
           var trackArgJson = track[trackKey]
