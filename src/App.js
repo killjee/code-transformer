@@ -1,9 +1,7 @@
 import { Button, Select, MenuItem, Typography, TextField, FormControl, InputLabel } from '@mui/material';
 import React from 'react';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
-import CodeMirror from "@uiw/react-codemirror";
+import Editor from "@monaco-editor/react";
 import { useEffect, useState } from 'react';
 import './App.css';
 
@@ -17,26 +15,25 @@ function App() {
   const [sourceOutput, setSourceOutput] = useState("Your generated code would appear here")
   const [showError, setShowError] = useState(false)
   const [playButtonDisabled, setPlayButtonDisabled] = useState(false)
+  const [editor, setEditor] = useState()
 
 
   useEffect(() => {
-    console.log("Hello world 2")
     fetch('https://lyfkykbisow7zkharariyw26ia0zppmy.lambda-url.us-east-1.on.aws/languages')
       .then(response => response.json())
       .then(json => {
-        console.log(json)
+
         setLanguages(json)
       })
       .catch(error => console.error(error));
   }, []);
 
   useEffect(() => {
-    console.log("Hello world 2")
     fetch('https://lyfkykbisow7zkharariyw26ia0zppmy.lambda-url.us-east-1.on.aws/tracks')
       .then(response => response.json())
       .then(trackJson => {
 
-        console.log(trackJson)
+
         var _tracks = []
 
         trackJson.forEach((track, index) => {
@@ -52,7 +49,7 @@ function App() {
             trackArgs.push(new TrackArgument(trackArgJson, null))
           } else {
             for (var trackArg in trackArgJson) {
-              console.log(trackArg)
+
               var value = trackArgJson[trackArg]
               if (value == null) {
                 value = ""
@@ -73,24 +70,21 @@ function App() {
   };
 
   const handleTrackChange = (event) => {
-    console.log(event.target.value)
     var newPreparedTrack = structuredClone(event.target.value)
     setPreparedTrack(newPreparedTrack)
     setSelectedTrack(event.target.value)
   };
 
   function handleInputChanged(value) {
-    console.log('val:', value);
     setSourceInput(value);
   };
 
   const handlePlay = async () => {
     var trackArgs = {}
     var track = {}
-    console.log(preparedTrack)
-    if (preparedTrack.argumentMap.length == 0) {
+    if (preparedTrack.argumentMap.length === 0) {
       track = preparedTrack.key
-    } else if (preparedTrack.argumentMap.length == 1 && preparedTrack.argumentMap[0].value == null) {
+    } else if (preparedTrack.argumentMap.length === 1 && preparedTrack.argumentMap[0].value == null) {
       track[preparedTrack.key] = preparedTrack.argumentMap[0].key
     } else {
       preparedTrack.argumentMap.forEach((arg) => {
@@ -99,37 +93,28 @@ function App() {
       track[preparedTrack.key] = trackArgs
     }
 
-    var body = JSON.stringify({
+    var requestBody = JSON.stringify({
       source: sourceInput,
       language: selectedLang,
       track: track
     })
-    console.log(sourceInput)
-    console.log(track)
-    console.log("Satyam " + body)
+
     setPlayButtonDisabled(true)
     const response = await fetch('https://lyfkykbisow7zkharariyw26ia0zppmy.lambda-url.us-east-1.on.aws/play', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        source: sourceInput,
-        language: selectedLang,
-        track: track
-      })
+      body: requestBody
     })
     setPlayButtonDisabled(false)
+
     if (response.ok) {
       setShowError(false)
-      var body = await response.json();
-      var rewrites = body["rewrites"]
+      var responseBody = await response.json();
 
-      var code = body["output"]
-      console.log(code)
-      setSourceOutput(body["output"])
-
-      console.log(body)
+      setSourceOutput(responseBody["output"])
+      highlightRewrites(responseBody["rewrites"])
     } else {
       setShowError(true)
     }
@@ -137,18 +122,51 @@ function App() {
 
   const handleArgumentChange = (event) => {
     preparedTrack.argumentMap.forEach((arg) => {
-      if (arg.key == event.target.id) {
+      if (arg.key === event.target.id) {
         var value = structuredClone(event.target.value)
         arg.value = value
       }
-
-      console.log(arg.key + "  " + arg.value + " " + preparedTrack.argumentMap[arg.key])
     })
     setPreparedTrack(preparedTrack)
   }
 
-  const inputCode = "// Write your code here"
-  const outputCode = "// Generated code would appear here"
+  function handleEditorSetup(editor) {
+    editor.updateOptions({
+      readOnly: true, minimap: {
+        enabled: false
+      }
+    })
+    setEditor(editor)
+  }
+
+  function highlightRewrites(rewrites) {
+    var decorations = []
+    rewrites.forEach((value, index) => {
+      var startRow = structuredClone(value["edit"]["start_position"]["row"])
+      var startColumn = structuredClone(value["edit"]["start_position"]["row"])
+      var endRow = structuredClone(value["edit"]["new_end_position"]["row"])
+      var endColumn = structuredClone(value["edit"]["new_end_position"]["row"])
+      var range = {
+        startLineNumber: startRow,
+        startColumn: startColumn,
+        endLineNumber: endRow,
+        endColumn: endColumn,
+      }
+      var decoration = {
+        range: range,
+        options: {
+          className: "inline_decoration",
+          hoverMessage: "Code refactored",
+          isWholeLine: true,
+        }
+      }
+      if (decorations.length < 1) {
+        decorations.push(decoration)
+      }
+    })
+    var dec = editor.createDecorationsCollection(decorations)
+  }
+
   return (
     <div className="container">
       <div className="selectors">
@@ -217,33 +235,37 @@ function App() {
       </div>
       <div className="code">
         <Card className="code-input" >
-          <CodeMirror
+          <Editor
             class="input-editor"
-            height='80vh'
-            value={inputCode}
+            height="85vh"
+            value={sourceInput}
+            theme='light'
+            defaultValue="// Write your code here"
             onChange={(value, viewUpdate) => {
               handleInputChanged(value)
             }}
-            theme="light"
           />
         </Card>
-        <Card className="code-output" >{
-          showError ?
-            <Typography className='error'> Some error, please try running again </Typography> :
-            <CodeMirror
-              class="input-editor"
-              height='80vh'
-              editable={false}
-              readOnly={true}
-              value={sourceOutput}
-              theme="light"
-            />}
+        <Card className="code-output" >
+          {
+            showError ?
+              <Typography className='error'> Some error, please try running again </Typography> :
+              <Editor
+                class="input-editor"
+                height="85vh"
+                value={sourceOutput}
+                theme='light'
+                defaultValue="// Write your code here"
+                onMount={(editor, monaco) => {
+                  handleEditorSetup(editor)
+                }}
+              />
+          }
         </Card>
       </div >
     </div >
   );
 }
-
 class Track {
   constructor(key, argumentMap) {
     this.key = key
