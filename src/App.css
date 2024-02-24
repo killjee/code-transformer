@@ -54,8 +54,14 @@
   margin-left: 4px;
 }
 
-
 .play-button {
+  align-self: center;
+  justify-self: center;
+  margin-left: 1em;
+  margin-top: 2em;
+}
+
+.diff-button {
   align-self: center;
   justify-self: center;
   margin-left: 1em;

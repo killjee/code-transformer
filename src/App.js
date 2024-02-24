@@ -1,8 +1,10 @@
 import { Button, Select, MenuItem, Typography, TextField, FormControl, InputLabel } from '@mui/material';
 import React from 'react';
 import Card from '@mui/material/Card';
-import Editor from "@monaco-editor/react";
+import { Editor, DiffEditor } from "@monaco-editor/react";
 import { useEffect, useState } from 'react';
+import Modal from 'react-bootstrap/Modal';
+import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
 
 function App() {
@@ -15,6 +17,8 @@ function App() {
   const [sourceOutput, setSourceOutput] = useState("Your generated code would appear here")
   const [showError, setShowError] = useState(false)
   const [playButtonDisabled, setPlayButtonDisabled] = useState(false)
+  const [codeGenerated, setCodeGenerated] = useState(false)
+  const [showModal, setShowModal] = useState(false)
   const [editor, setEditor] = useState()
 
 
@@ -108,6 +112,7 @@ function App() {
       body: requestBody
     })
     setPlayButtonDisabled(false)
+    setCodeGenerated(true)
 
     if (response.ok) {
       setShowError(false)
@@ -118,6 +123,10 @@ function App() {
     } else {
       setShowError(true)
     }
+  }
+
+  const handleDiff = () => {
+    setShowModal(true)
   }
 
   const handleArgumentChange = (event) => {
@@ -168,102 +177,125 @@ function App() {
   }
 
   return (
-    <div className="container">
-      <div className="selectors">
-        <div className="language-selector-div" >
-          <FormControl className="language-selector" fullWidth={false} variant='filled' size='small' >
-            <InputLabel id="language-select-label">Language</InputLabel>
-            <Select
-              id="language-selector"
-              value={selectedLang}
-              onChange={handleLanguageChange}
-            >
-              {
-                languages.map((language, index) =>
-                  <MenuItem value={language}>{language}</MenuItem>
-                )
-              }
-            </Select>
-          </FormControl>
-        </div>
-        <div className="track-selector-div" >
-          <FormControl
-            className="track-selector" fullWidth={false} variant='filled' size='small' >
-            <InputLabel id="track-select-label">Track</InputLabel>
-            <Select
-              id="track-selector"
-              onChange={handleTrackChange}
-              value={selectedTrack}
-            >
-              {
-                tracks.map((track, index) =>
-                  <MenuItem value={track}>{track.key}</MenuItem>
-                )
-              }
-            </Select>
-          </FormControl>
-
-        </div>
-      </div >
-      <div className="controls">
-        {
-          selectedTrack.argumentMap.map((argument, index) => {
-            return <div className="arguments">
-              {
-                (argument.value !== null && selectedLang !== "") &&
-                < TextField
-                  className="argument"
-                  id={argument.key}
-                  label={argument.key}
-                  onChange={handleArgumentChange}
-                  variant="standard" />
-              }
-
-            </div>
-          })
-        }
-        {
-          <div className="play-button">
-            {
-              (selectedTrack.key !== "placeholder" && selectedLang !== "") &&
-              <Button className="play-button" variant="contained" onClick={handlePlay} disabled={playButtonDisabled} >
-                Run
-              </Button>
-            }
+    <>
+      <div className="container">
+        <div className="selectors">
+          <div className="language-selector-div" >
+            <FormControl className="language-selector" fullWidth={false} variant='filled' size='small' >
+              <InputLabel id="language-select-label">Language</InputLabel>
+              <Select
+                id="language-selector"
+                value={selectedLang}
+                onChange={handleLanguageChange}
+              >
+                {
+                  languages.map((language, index) =>
+                    <MenuItem value={language}>{language}</MenuItem>
+                  )
+                }
+              </Select>
+            </FormControl>
           </div>
-        }
-      </div>
-      <div className="code">
-        <Card className="code-input" >
-          <Editor
-            class="input-editor"
-            height="85vh"
-            value={sourceInput}
-            theme='light'
-            defaultValue="// Write your code here"
-            onChange={(value, viewUpdate) => {
-              handleInputChanged(value)
-            }}
-          />
-        </Card>
-        <Card className="code-output" >
+          <div className="track-selector-div" >
+            <FormControl
+              className="track-selector" fullWidth={false} variant='filled' size='small' >
+              <InputLabel id="track-select-label">Track</InputLabel>
+              <Select
+                id="track-selector"
+                onChange={handleTrackChange}
+                value={selectedTrack}
+              >
+                {
+                  tracks.map((track, index) =>
+                    <MenuItem value={track}>{track.key}</MenuItem>
+                  )
+                }
+              </Select>
+            </FormControl>
+
+          </div>
+        </div >
+        <div className="controls">
           {
-            showError ?
-              <Typography className='error'> Some error, please try running again </Typography> :
-              <Editor
-                class="input-editor"
-                height="85vh"
-                value={sourceOutput}
-                theme='light'
-                defaultValue="// Write your code here"
-                onMount={(editor, monaco) => {
-                  handleEditorSetup(editor)
-                }}
-              />
+            selectedTrack.argumentMap.map((argument, index) => {
+              return <div className="arguments">
+                {
+                  (argument.value !== null && selectedLang !== "") &&
+                  < TextField
+                    className="argument"
+                    id={argument.key}
+                    label={argument.key}
+                    onChange={handleArgumentChange}
+                    variant="standard" />
+                }
+
+              </div>
+            })
           }
-        </Card>
+          {
+            <div className="play-button">
+              {
+                (selectedTrack.key !== "placeholder" && selectedLang !== "") &&
+                <Button className="play-button" variant="contained" onClick={handlePlay} disabled={playButtonDisabled} >
+                  Run
+                </Button>
+              }
+            </div>
+          }
+          {
+            <div className="diff-button">
+              {
+                (codeGenerated === true) &&
+                <Button className="diff-button" variant="contained" onClick={handleDiff} disabled={playButtonDisabled} >
+                  Diff
+                </Button>
+              }
+            </div>
+          }
+        </div>
+        <div className="code">
+          <Card className="code-input" >
+            <Editor
+              class="input-editor"
+              height="85vh"
+              value={sourceInput}
+              theme='light'
+              defaultValue="// Write your code here"
+              onChange={(value, viewUpdate) => {
+                handleInputChanged(value)
+              }}
+            />
+          </Card>
+          <Card className="code-output" >
+            {
+              showError ?
+                <Typography className='error'> Some error, please try running again </Typography> :
+                <Editor
+                  class="input-editor"
+                  height="85vh"
+                  value={sourceOutput}
+                  theme='light'
+                  defaultValue="// Write your code here"
+                  onMount={(editor, monaco) => {
+                    handleEditorSetup(editor)
+                  }}
+                />
+            }
+          </Card>
+        </div >
       </div >
-    </div >
+      <Modal show={showModal} fullscreen={true} onHide={() => setShowModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Diff</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <DiffEditor
+            original={sourceInput}
+            modified={sourceOutput}
+          />
+        </Modal.Body>
+      </Modal>
+    </>
   );
 }
 class Track {
