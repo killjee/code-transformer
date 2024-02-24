@@ -34,3 +34,11 @@ export async function CallPlay(preparedTrack, sourceInput, selectedLang) {
     })
     return response
 }
+
+export function CallGetLanguages() {
+    return fetch('https://lyfkykbisow7zkharariyw26ia0zppmy.lambda-url.us-east-1.on.aws/languages')
+}
+
+export function CallGetTracks() {
+    return fetch('https://lyfkykbisow7zkharariyw26ia0zppmy.lambda-url.us-east-1.on.aws/tracks')
+}

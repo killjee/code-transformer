@@ -9,7 +9,7 @@ import './App.css';
 import { Selectors } from './selector';
 import { Controls } from './controls';
 import { Track, TrackArgument } from './track';
-import { CallPlay } from './network';
+import { CallGetLanguages, CallGetTracks, CallPlay } from './network';
 
 function App() {
   const [languages, setLanguages] = useState([]);
@@ -22,15 +22,15 @@ function App() {
   const [showError, setShowError] = useState(false)
   const [playButtonDisabled, setPlayButtonDisabled] = useState(false)
   const [codeGenerated, setCodeGenerated] = useState(false)
-  const [showModal, setShowModal] = useState(false)
+  const [showDiffModal, setShowDiffModal] = useState(false)
   const [showReplayModal, setShowReplayModal] = useState(false)
-  const [totalUndoChanges, setTotalUndoChanges] = useState(0)
+  const [changesReplayed, setChangesReplayed] = useState(0)
   const [rewriteStates, setRewriteStates] = useState([])
   const [diffableOutput, setDiffableOutput] = useState("")
 
   // - MARK: Hooks
   useEffect(() => {
-    fetch('https://lyfkykbisow7zkharariyw26ia0zppmy.lambda-url.us-east-1.on.aws/languages')
+    CallGetLanguages()
       .then(response => response.json())
       .then(json => {
 
@@ -40,7 +40,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    fetch('https://lyfkykbisow7zkharariyw26ia0zppmy.lambda-url.us-east-1.on.aws/tracks')
+    CallGetTracks()
       .then(response => response.json())
       .then(trackJson => {
         var _tracks = []
@@ -86,9 +86,9 @@ function App() {
 
   // Logic to embed changes 1 by 1 and present to UI
   const handleReplay = () => {
-    var rewriteIndex = totalUndoChanges
+    var rewriteIndex = changesReplayed
     var tempCode = diffableOutput
-    if (totalUndoChanges === 0) {
+    if (changesReplayed === 0) {
       tempCode = sourceInput
     }
 
@@ -110,7 +110,7 @@ function App() {
     }
 
     setDiffableOutput(firstPart + secondPart + thirdPart)
-    setTotalUndoChanges(totalUndoChanges + 1)
+    setChangesReplayed(changesReplayed + 1)
   }
 
   // Code input changed
@@ -137,7 +137,7 @@ function App() {
 
   const handleDiffButtonTap = () => {
     setDiffableOutput(sourceOutput)
-    setShowModal(true)
+    setShowDiffModal(true)
   }
 
   const handleReplayButtonTap = () => {
@@ -225,17 +225,17 @@ function App() {
       </div >
       <Modal show={showReplayModal} fullscreen={true} onHide={() => {
         setShowReplayModal(false)
-        setTotalUndoChanges(0)
+        setChangesReplayed(0)
       }}>
         <Modal.Header closeButton>
           <Button
             className="play-button"
             variant="contained"
             onClick={handleReplay}
-            disabled={totalUndoChanges === rewriteStates.length}>
+            disabled={changesReplayed === rewriteStates.length}>
             {
-              totalUndoChanges !== rewriteStates.length ?
-                "Replay change number: " + (totalUndoChanges + 1) + " out of " + rewriteStates.length + " changes" :
+              changesReplayed !== rewriteStates.length ?
+                "Replay change number: " + (changesReplayed + 1) + " out of " + rewriteStates.length + " changes" :
                 "Replay complete"
             }
           </Button>
@@ -248,9 +248,9 @@ function App() {
           />
         </Modal.Body>
       </Modal >
-      <Modal show={showModal} fullscreen={true} onHide={() => {
-        setShowModal(false)
-        setTotalUndoChanges(0)
+      <Modal show={showDiffModal} fullscreen={true} onHide={() => {
+        setShowDiffModal(false)
+        setChangesReplayed(0)
       }}>
         <Modal.Header closeButton>
           Diff
@@ -264,7 +264,6 @@ function App() {
         </Modal.Body>
       </Modal >
     </>
-
   );
 }
 
