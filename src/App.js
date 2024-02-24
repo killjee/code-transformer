@@ -1,4 +1,4 @@
-import { Button, Select, MenuItem, Typography, TextField } from '@mui/material';
+import { Button, Select, MenuItem, Typography, TextField, FormControl, InputLabel } from '@mui/material';
 import React from 'react';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import Card from '@mui/material/Card';
@@ -14,7 +14,7 @@ function App() {
   const [selectedTrack, setSelectedTrack] = useState(new Track("placeholder", []));
   const [preparedTrack, setPreparedTrack] = useState(new Track("placeholder", []))
   const [sourceInput, setSourceInput] = useState("")
-  const [sourceOutput, setSourceOutput] = useState("")
+  const [sourceOutput, setSourceOutput] = useState("Your generated code would appear here")
   const [showError, setShowError] = useState(false)
   const [playButtonDisabled, setPlayButtonDisabled] = useState(false)
 
@@ -74,7 +74,7 @@ function App() {
 
   const handleTrackChange = (event) => {
     console.log(event.target.value)
-    var newPreparedTrack = event.target.value
+    var newPreparedTrack = structuredClone(event.target.value)
     setPreparedTrack(newPreparedTrack)
     setSelectedTrack(event.target.value)
   };
@@ -92,13 +92,11 @@ function App() {
       track = preparedTrack.key
     } else if (preparedTrack.argumentMap.length == 1 && preparedTrack.argumentMap[0].value == null) {
       track[preparedTrack.key] = preparedTrack.argumentMap[0].key
-      track = JSON.stringify(track)
     } else {
       preparedTrack.argumentMap.forEach((arg) => {
         trackArgs[arg.key] = arg.value
       })
       track[preparedTrack.key] = trackArgs
-      track = JSON.stringify(track)
     }
 
     var body = JSON.stringify({
@@ -106,6 +104,8 @@ function App() {
       language: selectedLang,
       track: track
     })
+    console.log(sourceInput)
+    console.log(track)
     console.log("Satyam " + body)
     setPlayButtonDisabled(true)
     const response = await fetch('https://lyfkykbisow7zkharariyw26ia0zppmy.lambda-url.us-east-1.on.aws/play', {
@@ -123,6 +123,10 @@ function App() {
     if (response.ok) {
       setShowError(false)
       var body = await response.json();
+      var rewrites = body["rewrites"]
+
+      var code = body["output"]
+      console.log(code)
       setSourceOutput(body["output"])
 
       console.log(body)
@@ -132,15 +136,15 @@ function App() {
   }
 
   const handleArgumentChange = (event) => {
-    var newPreparedTrack = selectedTrack
-    newPreparedTrack.argumentMap.forEach((arg) => {
-      if (selectedTrack.key == preparedTrack.key) {
-        arg.value = preparedTrack.argumentMap[arg.key]
+    preparedTrack.argumentMap.forEach((arg) => {
+      if (arg.key == event.target.id) {
+        var value = structuredClone(event.target.value)
+        arg.value = value
       }
-      console.log(arg.value)
+
+      console.log(arg.key + "  " + arg.value + " " + preparedTrack.argumentMap[arg.key])
     })
-    newPreparedTrack.argumentMap[event.target.id] = event.target.value
-    setPreparedTrack(newPreparedTrack)
+    setPreparedTrack(preparedTrack)
   }
 
   const inputCode = "// Write your code here"
@@ -148,32 +152,41 @@ function App() {
   return (
     <div className="container">
       <div className="selectors">
-        <Select
-          className="language-selector"
-          id="demo-simple-select"
-          value={selectedLang}
-          onChange={handleLanguageChange}
-        >
-          {
-            languages.map((language, index) =>
-              <MenuItem value={language}>{language}</MenuItem>
-            )
-          }
-        </Select>
-        <Select
-          className="track-selector"
-          id="demo-simple-select"
-          onChange={handleTrackChange}
-          value={selectedTrack}
-        >
-          {
-            tracks.map((track, index) =>
-              <MenuItem value={track}>{track.key}</MenuItem>
-            )
-          }
-        </Select>
+        <div className="language-selector-div" >
+          <FormControl className="language-selector" fullWidth={false} variant='filled' size='small' >
+            <InputLabel id="language-select-label">Language</InputLabel>
+            <Select
+              id="language-selector"
+              value={selectedLang}
+              onChange={handleLanguageChange}
+            >
+              {
+                languages.map((language, index) =>
+                  <MenuItem value={language}>{language}</MenuItem>
+                )
+              }
+            </Select>
+          </FormControl>
+        </div>
+        <div className="track-selector-div" >
+          <FormControl
+            className="track-selector" fullWidth={false} variant='filled' size='small' >
+            <InputLabel id="track-select-label">Track</InputLabel>
+            <Select
+              id="track-selector"
+              onChange={handleTrackChange}
+              value={selectedTrack}
+            >
+              {
+                tracks.map((track, index) =>
+                  <MenuItem value={track}>{track.key}</MenuItem>
+                )
+              }
+            </Select>
+          </FormControl>
 
-      </div>
+        </div>
+      </div >
       <div className="controls">
         {
           selectedTrack.argumentMap.map((argument, index) => {
@@ -192,16 +205,21 @@ function App() {
           })
         }
         {
-          (selectedTrack.key !== "placeholder" && selectedLang !== "") &&
-          <Button className="play-button" variant="contained" onClick={handlePlay} disabled={playButtonDisabled} >
-            Run
-          </Button>
+          <div className="play-button">
+            {
+              (selectedTrack.key !== "placeholder" && selectedLang !== "") &&
+              <Button className="play-button" variant="contained" onClick={handlePlay} disabled={playButtonDisabled} >
+                Run
+              </Button>
+            }
+          </div>
         }
       </div>
       <div className="code">
         <Card className="code-input" >
           <CodeMirror
             class="input-editor"
+            height='80vh'
             value={inputCode}
             onChange={(value, viewUpdate) => {
               handleInputChanged(value)
@@ -214,6 +232,7 @@ function App() {
             <Typography className='error'> Some error, please try running again </Typography> :
             <CodeMirror
               class="input-editor"
+              height='80vh'
               editable={false}
               readOnly={true}
               value={sourceOutput}
