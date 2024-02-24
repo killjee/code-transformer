@@ -4,22 +4,45 @@
   height: 100%;
 }
 
-.controls {
+.selectors {
   display: flex;
   flex-direction: row;
   align-items: center;
   margin: 1em;
 }
 
-.play-button {
-  align-self: center;
-  margin-left: 1em;
-}
 
 .language-selector {
   height: 30px;
 }
 
+.track-selector {
+  height: 30px;
+  margin-left: 4px;
+}
+
+.controls {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-self: center;
+  margin-bottom: 1em;
+  margin-left: 1em;
+}
+
+.arguments {
+  height: 30px;
+  align-self: center;
+  margin-right: 4px;
+  margin-left: 4px;
+}
+
+
+.play-button {
+  align-self: center;
+  justify-self: center;
+  margin-left: 1em;
+}
 
 .code {
   display: flex;
@@ -36,4 +59,13 @@
 
 .code-output {
   flex: 1;
+}
+
+.error {
+  height: 100%;
+  width: 100%;
+  text-decoration-color: red;
+  text-emphasis-color: red;
+  align-self: center;
+  justify-self: center;
 }
