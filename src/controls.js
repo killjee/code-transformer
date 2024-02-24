@@ -15,7 +15,7 @@ export function Controls({ selectedTrack, handleArgumentChange, selectedLang,
                             id={argument.key}
                             label={argument.key}
                             onChange={handleArgumentChange}
-                            variant="standard" />
+                            variant="filled" />
                     }
 
                 </div>
