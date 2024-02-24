@@ -1,4 +1,4 @@
-import { Button, Select, MenuItem, Typography, TextField, FormControl, InputLabel } from '@mui/material';
+import { Button, Typography } from '@mui/material';
 import React from 'react';
 import Card from '@mui/material/Card';
 import { Editor, DiffEditor } from "@monaco-editor/react";
@@ -6,8 +6,8 @@ import { useEffect, useState } from 'react';
 import Modal from 'react-bootstrap/Modal';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
-import { diff } from 'react-ace';
 import { Selectors } from './selector';
+import { Controls } from './controls';
 
 function App() {
   const [languages, setLanguages] = useState([]);
@@ -89,17 +89,22 @@ function App() {
   const handleReplay = () => {
     var rewriteIndex = totalUndoChanges
     var tempCode = diffableOutput
-    if (totalUndoChanges == 0) {
+    if (totalUndoChanges === 0) {
       tempCode = sourceInput
     }
 
     var startIndex = rewriteStates[rewriteIndex]["edit"]["start_byte"]
     var endIndex = rewriteStates[rewriteIndex]["edit"]["old_end_byte"]
+
+    // Part before change
     var firstPart = ""
     if (startIndex > 0) {
       firstPart = tempCode.substring(0, startIndex)
     }
+    // Change
     var secondPart = rewriteStates[rewriteIndex]["replacement"]
+
+    // Part after change
     var thirdPart = ""
     if (endIndex < tempCode.length) {
       thirdPart = tempCode.substring(endIndex)
@@ -211,52 +216,15 @@ function App() {
           />
         </div >
         <div className="controls">
-          {
-            selectedTrack.argumentMap.map((argument, index) => {
-              return <div className="arguments">
-                {
-                  (argument.value !== null && selectedLang !== "") &&
-                  < TextField
-                    className="argument"
-                    id={argument.key}
-                    label={argument.key}
-                    onChange={handleArgumentChange}
-                    variant="standard" />
-                }
-
-              </div>
-            })
-          }
-          {
-            <div className="play-button">
-              {
-                (selectedTrack.key !== "placeholder" && selectedLang !== "") &&
-                <Button className="play-button" variant="contained" onClick={handlePlayButtonTap} disabled={playButtonDisabled} >
-                  Run
-                </Button>
-              }
-            </div>
-          }
-          {
-            <div className="diff-button">
-              {
-                (codeGenerated === true) &&
-                <Button className="diff-button" variant="contained" onClick={handleDiffButtonTap} disabled={playButtonDisabled} >
-                  Diff
-                </Button>
-              }
-            </div>
-          }
-          {
-            <div className="replay-button">
-              {
-                (codeGenerated === true) &&
-                <Button className="replay-button" variant="contained" onClick={handleReplayButtonTap} disabled={playButtonDisabled} >
-                  Replay
-                </Button>
-              }
-            </div>
-          }
+          <Controls
+            selectedTrack={selectedTrack}
+            handleArgumentChange={handleArgumentChange}
+            selectedLang={selectedLang}
+            handlePlayButtonTap={handlePlayButtonTap}
+            playButtonDisabled={playButtonDisabled}
+            codeGenerated={codeGenerated}
+            handleDiffButtonTap={handleDiffButtonTap}
+            handleReplayButtonTap={handleReplayButtonTap} />
         </div>
         <div className="code">
           <Card className="code-input" >

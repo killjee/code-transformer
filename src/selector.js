@@ -1,4 +1,4 @@
-import { Button, Select, MenuItem, Typography, TextField, FormControl, InputLabel } from '@mui/material';
+import { Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import './App.css';
 
 export function Selectors({ selectedLang, handleLanguageChange, languages,
